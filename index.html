@@ -16,10 +16,18 @@
       repo: '',
       loadSidebar: true,
       subMaxLevel: 2,
-      loadNavbar: true
+      loadNavbar: true,
+      search: {
+        placeholder: '検索',
+        noData: '結果が見つかりません',
+        paths: 'auto',
+        depth: 2
+      }
     }
   </script>
   <!-- Docsify v4 -->
   <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <!-- Search plugin -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
 </body>
 </html>
