@@ -1,0 +1,6 @@
+{
+  "name": "blog",
+  "scripts": {
+    "sidebar": "node generate-sidebar.js"
+  }
+}
