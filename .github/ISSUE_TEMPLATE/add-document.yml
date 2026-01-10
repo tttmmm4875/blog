@@ -21,11 +21,7 @@ body:
         **既存フォルダ:**
         - `php/laravel/` - Laravel関連ドキュメント
         - `chrome/` - Chrome拡張機能関連
-      placeholder: |
-        例:
-        php/laravel
-        chrome
-        新規フォルダ/サブフォルダ
+      value: "既存のフォルダ構成とファイル内容から適切なフォルダ構成を考えてください"
     validations:
       required: true
 
