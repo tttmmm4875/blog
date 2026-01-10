@@ -25,10 +25,8 @@ body:
     id: file-name
     attributes:
       label: ファイル名
-      description: |
-        `.md` 形式で指定してください。
-        未指定の場合はファイル内容から適切な名前を自動決定します。
-      placeholder: example-document.md
+      description: ".md 形式で指定してください。変更がない場合はそのままで構いません。"
+      value: "md形式でファイル内容から適切なファイル名を決めてください"
     validations:
       required: false
 
