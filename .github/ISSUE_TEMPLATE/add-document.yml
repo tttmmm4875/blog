@@ -1,0 +1,53 @@
+name: ドキュメント追加
+description: 新しいドキュメントを追加するためのIssueテンプレート
+body:
+  - type: textarea
+    id: folder-path
+    attributes:
+      label: フォルダ構成
+      description: |
+        配置先フォルダのパスを入力してください。
+        既存フォルダがある場合は再利用を推奨します。
+
+        **既存フォルダ:**
+        - `php/laravel/` - Laravel関連ドキュメント
+        - `chrome/` - Chrome拡張機能関連
+      placeholder: |
+        例:
+        php/laravel
+        chrome
+        新規フォルダ/サブフォルダ
+    validations:
+      required: true
+
+  - type: input
+    id: file-name
+    attributes:
+      label: ファイル名
+      description: |
+        `.md` 形式で指定してください。
+        未指定の場合はファイル内容から適切な名前を自動決定します。
+      placeholder: example-document.md
+    validations:
+      required: false
+
+  - type: textarea
+    id: file-content
+    attributes:
+      label: ファイル内容
+      description: |
+        ドキュメントの内容を直接記述するか、Claude Codeへの指示を入力してください。
+      placeholder: |
+        # ドキュメントタイトル
+
+        ## 概要
+        ここに内容を記述...
+
+        または
+
+        【Claude Codeへの指示】
+        〇〇について調査し、以下の項目を含むドキュメントを作成してください：
+        - 項目1
+        - 項目2
+    validations:
+      required: true
