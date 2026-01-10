@@ -2,9 +2,13 @@ name: ドキュメント追加
 description: 新しいドキュメントを追加するためのIssueテンプレート
 title: "[ドキュメント追加] "
 body:
-  - type: markdown
+  - type: textarea
+    id: instruction
     attributes:
+      label: 指示
       value: "@claude 以下の指示に従ってドキュメントを追加してください"
+    validations:
+      required: true
 
   - type: textarea
     id: folder-path
