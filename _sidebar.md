@@ -3,6 +3,9 @@
 * [ホーム](/)
 * [ガイド](/guide.md)
 
+* **chrome**
+  * [お気に入り拡張機能](/chrome/favorite-extensions.md)
+
 * **php**
 
   * **laravel**
