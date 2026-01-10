@@ -48,5 +48,6 @@ body:
         〇〇について調査し、以下の項目を含むドキュメントを作成してください：
         - 項目1
         - 項目2
+      render: markdown
     validations:
       required: true
