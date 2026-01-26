@@ -32,14 +32,25 @@ jobs:
         run: npm run sidebar
 
       - name: Commit and push if changed
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           if git diff --quiet; then
             echo "No changes to _sidebar.md"
+            echo "changed=false" >> $GITHUB_OUTPUT
           else
             git add _sidebar.md
             git commit -m "chore: update sidebar [skip ci]"
             git push origin ${{ github.event.pull_request.head.ref }}
+            echo "changed=true" >> $GITHUB_OUTPUT
           fi
+
+      - name: Trigger preview deploy (no sidebar changes)
+        if: steps.commit.outputs.changed == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run pr-preview-deploy.yml \
+            --field pr_number=${{ github.event.pull_request.number }}
