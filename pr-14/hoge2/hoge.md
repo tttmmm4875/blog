@@ -1,5 +1,0 @@
-# hogehoge
-
-## fugafuga
-
-hogehoge,fugafuga
