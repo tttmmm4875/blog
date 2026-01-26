@@ -1,0 +1,122 @@
+name: PR Preview Deploy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: "pr-preview-${{ github.event.pull_request.number }}"
+  cancel-in-progress: true
+
+jobs:
+  deploy-preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: pr-content
+
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Copy PR content to preview directory
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          rm -rf gh-pages/pr-${PR_NUMBER}
+          mkdir -p gh-pages/pr-${PR_NUMBER}
+
+          # Copy all files except .git
+          rsync -av --exclude='.git' pr-content/ gh-pages/pr-${PR_NUMBER}/
+
+          # Generate custom index.html with basePath for PR preview
+          cat > gh-pages/pr-${PR_NUMBER}/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="ja">
+          <head>
+            <meta charset="UTF-8">
+            <title>Blog - PR Preview</title>
+            <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+            <meta name="description" content="PR Preview">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+            <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+          </head>
+          <body>
+            <div id="app"></div>
+            <script>
+              window.$docsify = {
+                name: 'Blog (PR Preview)',
+                repo: '',
+                loadSidebar: true,
+                loadNavbar: true,
+                subMaxLevel: 2,
+                basePath: '/blog/pr-PR_NUMBER_PLACEHOLDER/'
+              }
+            </script>
+            <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
+          </body>
+          </html>
+          EOF
+
+          # Replace placeholder with actual PR number
+          sed -i "s/PR_NUMBER_PLACEHOLDER/${PR_NUMBER}/g" gh-pages/pr-${PR_NUMBER}/index.html
+
+      - name: Push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Deploy PR #${{ github.event.pull_request.number }} preview"
+          git push origin gh-pages
+
+      - name: Comment preview URL on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const previewUrl = `https://tttmmm4875.github.io/blog/pr-${prNumber}/`;
+
+            // Find existing preview comment
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber
+            });
+
+            const botComment = comments.data.find(comment =>
+              comment.user.type === 'Bot' &&
+              comment.body.includes('Preview URL')
+            );
+
+            const commentBody = `## Preview URL\n\n${previewUrl}\n\n*Updated at: ${new Date().toISOString()}*`;
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+            }
+
+  call-deploy:
+    needs: deploy-preview
+    uses: ./.github/workflows/deploy-pages.yml
