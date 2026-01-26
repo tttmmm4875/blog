@@ -5,8 +5,8 @@
 * **chrome**
   * [お気に入り拡張機能](/chrome/favorite-extensions.md)
 
-* **hoge**
-  * [hogehoge](/hoge/hoge.md)
+* **hoge2**
+  * [hogehoge](/hoge2/hoge.md)
 
 * **php**
 
