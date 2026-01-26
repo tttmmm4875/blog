@@ -4,6 +4,12 @@ on:
   workflow_run:
     workflows: ["PR Sidebar Update"]
     types: [completed]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to deploy'
+        required: true
+        type: number
 
 permissions:
   contents: write
@@ -12,47 +18,62 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: "pr-preview-${{ github.event.workflow_run.pull_requests[0].number }}"
+  group: "pr-preview-${{ github.event.workflow_run.pull_requests[0].number || inputs.pr_number }}"
   cancel-in-progress: true
 
 jobs:
   deploy-preview:
     runs-on: ubuntu-latest
     if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.pull_requests[0]
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.pull_requests[0])
     outputs:
       pr_number: ${{ steps.pr.outputs.number }}
     steps:
-      - name: Get PR number
+      - name: Get PR info
         id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo "number=${{ github.event.workflow_run.pull_requests[0].number }}" >> $GITHUB_OUTPUT
-          echo "head_sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            PR_NUMBER=${{ inputs.pr_number }}
+          else
+            PR_NUMBER=${{ github.event.workflow_run.pull_requests[0].number }}
+          fi
+          echo "number=${PR_NUMBER}" >> $GITHUB_OUTPUT
+
+          # PRのブランチ名を取得
+          BRANCH_NAME=$(gh pr view ${PR_NUMBER} --repo ${{ github.repository }} --json headRefName --jq '.headRefName')
+          echo "branch=${BRANCH_NAME}" >> $GITHUB_OUTPUT
 
       - name: Checkout PR branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.pr.outputs.head_sha }}
-          path: pr-content
+          ref: ${{ steps.pr.outputs.branch }}
+
+      - name: Copy content to temp directory
+        run: |
+          PR_NUMBER=${{ steps.pr.outputs.number }}
+          mkdir -p /tmp/pr-${PR_NUMBER}
+
+          # .で始まるフォルダ/ファイル以外をコピー
+          find . -maxdepth 1 ! -name '.' ! -name '.*' -exec cp -r {} /tmp/pr-${PR_NUMBER}/ \;
 
       - name: Checkout gh-pages branch
         uses: actions/checkout@v4
         with:
           ref: gh-pages
-          path: gh-pages
 
-      - name: Copy PR content to preview directory
+      - name: Copy temp content to preview directory
         run: |
           PR_NUMBER=${{ steps.pr.outputs.number }}
-          rm -rf gh-pages/pr-${PR_NUMBER}
-          mkdir -p gh-pages/pr-${PR_NUMBER}
+          rm -rf pr-${PR_NUMBER}
+          mkdir -p pr-${PR_NUMBER}
+          cp -r /tmp/pr-${PR_NUMBER}/. pr-${PR_NUMBER}/
 
-          # Copy all files except .git
-          rsync -av --exclude='.git' pr-content/ gh-pages/pr-${PR_NUMBER}/
-
-          # Generate custom index.html with basePath for PR preview
-          cat > gh-pages/pr-${PR_NUMBER}/index.html << 'EOF'
+          # カスタムindex.htmlを生成
+          cat > pr-${PR_NUMBER}/index.html << 'EOF'
           <!DOCTYPE html>
           <html lang="ja">
           <head>
@@ -80,12 +101,10 @@ jobs:
           </html>
           EOF
 
-          # Replace placeholder with actual PR number
-          sed -i "s/PR_NUMBER_PLACEHOLDER/${PR_NUMBER}/g" gh-pages/pr-${PR_NUMBER}/index.html
+          sed -i "s/PR_NUMBER_PLACEHOLDER/${PR_NUMBER}/g" pr-${PR_NUMBER}/index.html
 
       - name: Push to gh-pages
         run: |
-          cd gh-pages
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
